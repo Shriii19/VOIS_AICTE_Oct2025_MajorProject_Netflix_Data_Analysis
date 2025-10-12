@@ -9,6 +9,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import os
+import random
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 # Page configuration
 st.set_page_config(
@@ -121,6 +124,61 @@ if df is not None:
                    int(df['year_added'].max()) if df['year_added'].notna().any() else 2021)
         )
     
+    # Additional filters
+    if 'rating' in df.columns:
+        all_ratings = df['rating'].dropna().unique()
+        selected_ratings = st.sidebar.multiselect(
+            "Select Ratings",
+            options=sorted(all_ratings),
+            default=sorted(all_ratings)
+        )
+    else:
+        selected_ratings = []
+    
+    if 'listed_in' in df.columns:
+        all_genres = df['listed_in'].dropna().str.split(', ').explode().unique()
+        selected_genres = st.sidebar.multiselect(
+            "Select Genres",
+            options=sorted(all_genres)[:20],  # Top 20 for performance
+            default=[]
+        )
+    else:
+        selected_genres = []
+    
+    if 'country' in df.columns:
+        all_countries = df['country'].dropna().str.split(', ').explode().unique()
+        top_countries = df['country'].dropna().str.split(', ').explode().value_counts().head(15).index.tolist()
+        selected_countries = st.sidebar.multiselect(
+            "Select Countries",
+            options=sorted(top_countries),
+            default=[]
+        )
+    else:
+        selected_countries = []
+    
+    # Fun Facts Section
+    st.sidebar.markdown("---")
+    st.sidebar.header("💡 Did You Know?")
+    
+    fun_facts = [
+        f"🎬 Netflix has content from {df['country'].dropna().str.split(', ').explode().nunique()} countries!",
+        f"📺 The platform added {len(df[df['year_added'] == df['year_added'].max()])} titles in {int(df['year_added'].max())}!",
+        f"⭐ '{df['rating'].mode()[0]}' is the most common rating!",
+        f"🎭 '{df['listed_in'].dropna().str.split(', ').explode().mode()[0]}' is the top genre!",
+        f"🎥 Average movie duration is {df[df['type']=='Movie']['duration'].str.extract(r'(\d+)')[0].astype(float).mean():.0f} minutes!",
+        f"🌍 USA produces {len(df[df['country'].str.contains('United States', na=False)])} titles!",
+        f"📈 Content library grew {((len(df) / len(df[df['year_added'] == df['year_added'].min()])) * 100):.0f}% since inception!",
+        f"🎬 Top director has {df['director'].value_counts().iloc[0]} titles!" if 'director' in df.columns else "🎬 Explore to find top directors!",
+    ]
+    
+    if st.sidebar.button("🔄 Refresh Fun Fact"):
+        st.session_state.fun_fact_index = random.randint(0, len(fun_facts) - 1)
+    
+    if 'fun_fact_index' not in st.session_state:
+        st.session_state.fun_fact_index = random.randint(0, len(fun_facts) - 1)
+    
+    st.sidebar.info(fun_facts[st.session_state.fun_fact_index])
+    
     # Filter data
     if 'type' in df.columns and content_type:
         filtered_df = df[df['type'].isin(content_type)]
@@ -132,6 +190,16 @@ if df is not None:
             (filtered_df['year_added'] >= year_range[0]) & 
             (filtered_df['year_added'] <= year_range[1])
         ]
+    
+    # Apply additional filters
+    if selected_ratings and 'rating' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['rating'].isin(selected_ratings)]
+    
+    if selected_genres and 'listed_in' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['listed_in'].str.contains('|'.join(selected_genres), na=False)]
+    
+    if selected_countries and 'country' in filtered_df.columns:
+        filtered_df = filtered_df[filtered_df['country'].str.contains('|'.join(selected_countries), na=False)]
     
     # Key Metrics
     st.header("📈 Key Metrics")
@@ -155,14 +223,44 @@ if df is not None:
             countries = filtered_df['country'].dropna().str.split(', ').explode().nunique()
             st.metric("Countries", f"{countries:,}")
     
+    # Summary Statistics Cards
+    st.header("📊 Summary Statistics")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        if 'duration' in filtered_df.columns and 'type' in filtered_df.columns:
+            avg_duration = filtered_df[filtered_df['type']=='Movie']['duration'].str.extract(r'(\d+)')[0].astype(float).mean()
+            st.metric("Avg Movie Length", f"{avg_duration:.0f} min")
+    
+    with col2:
+        if 'listed_in' in filtered_df.columns:
+            top_genre = filtered_df['listed_in'].dropna().str.split(', ').explode().mode()[0]
+            st.metric("Top Genre", f"{top_genre[:15]}...")
+    
+    with col3:
+        if 'country' in filtered_df.columns:
+            top_country = filtered_df['country'].dropna().str.split(', ').explode().mode()[0]
+            st.metric("Top Country", top_country)
+    
+    with col4:
+        if 'rating' in filtered_df.columns:
+            top_rating = filtered_df['rating'].mode()[0]
+            st.metric("Common Rating", top_rating)
+    
+    with col5:
+        if 'year_added' in filtered_df.columns:
+            growth = len(filtered_df[filtered_df['year_added'] == filtered_df['year_added'].max()])
+            st.metric("Latest Year Adds", f"{growth:,}")
+    
     st.markdown("---")
     
     # Main content - Tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Overview", 
         "🎭 Genres", 
         "🌍 Geographic", 
-        "📅 Temporal", 
+        "📅 Temporal",
+        "👥 Cast & Directors", 
         "🔍 Explore Data"
     ])
     
@@ -375,8 +473,97 @@ if df is not None:
                 )
                 st.plotly_chart(fig, use_container_width=True)
     
-    # Tab 5: Explore Data
+    # Tab 5: Cast & Directors
     with tab5:
+        st.header("👥 Top Cast & Directors")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("🎬 Most Prolific Directors")
+            if 'director' in filtered_df.columns:
+                directors_df = filtered_df['director'].dropna().str.split(', ').explode()
+                top_directors = directors_df.value_counts().head(15)
+                
+                fig = px.bar(
+                    x=top_directors.values,
+                    y=top_directors.index,
+                    orientation='h',
+                    title="Top 15 Directors by Number of Titles",
+                    labels={'x': 'Number of Titles', 'y': 'Director'},
+                    color=top_directors.values,
+                    color_continuous_scale='Reds'
+                )
+                fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Directors table
+                st.dataframe(
+                    pd.DataFrame({
+                        'Director': top_directors.index,
+                        'Titles': top_directors.values
+                    }).reset_index(drop=True),
+                    hide_index=True,
+                    height=300
+                )
+        
+        with col2:
+            st.subheader("⭐ Most Featured Cast Members")
+            if 'cast' in filtered_df.columns:
+                cast_df = filtered_df['cast'].dropna().str.split(', ').explode()
+                top_cast = cast_df.value_counts().head(15)
+                
+                fig = px.bar(
+                    x=top_cast.values,
+                    y=top_cast.index,
+                    orientation='h',
+                    title="Top 15 Cast Members by Appearances",
+                    labels={'x': 'Number of Appearances', 'y': 'Cast Member'},
+                    color=top_cast.values,
+                    color_continuous_scale='Reds'
+                )
+                fig.update_layout(yaxis={'categoryorder': 'total ascending'})
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Cast table
+                st.dataframe(
+                    pd.DataFrame({
+                        'Cast Member': top_cast.index,
+                        'Appearances': top_cast.values
+                    }).reset_index(drop=True),
+                    hide_index=True,
+                    height=300
+                )
+        
+        # Word Cloud from Descriptions
+        st.subheader("☁️ Content Themes Word Cloud")
+        if 'description' in filtered_df.columns:
+            descriptions_text = ' '.join(filtered_df['description'].dropna().astype(str))
+            
+            if descriptions_text:
+                try:
+                    wordcloud = WordCloud(
+                        width=1200, 
+                        height=400, 
+                        background_color='black',
+                        colormap='Reds',
+                        max_words=100,
+                        relative_scaling=0.5,
+                        min_font_size=10
+                    ).generate(descriptions_text)
+                    
+                    fig, ax = plt.subplots(figsize=(15, 5))
+                    ax.imshow(wordcloud, interpolation='bilinear')
+                    ax.axis('off')
+                    plt.tight_layout(pad=0)
+                    st.pyplot(fig)
+                    
+                    st.caption("Word cloud generated from content descriptions showing popular themes and keywords")
+                except Exception as e:
+                    st.warning(f"Could not generate word cloud: {e}")
+    
+    # Tab 6: Explore Data
+    with tab6:
         st.header("Explore Raw Data")
         
         # Search functionality
