@@ -29,6 +29,22 @@ st.markdown("""
         padding: 10px;
         border-radius: 5px;
     }
+    .stMetric label {
+        color: #000000 !important;
+        font-weight: 600;
+    }
+    .stMetric .css-1xarl3l {
+        color: #000000 !important;
+    }
+    [data-testid="stMetricValue"] {
+        color: #E50914 !important;
+        font-size: 28px !important;
+        font-weight: bold !important;
+    }
+    [data-testid="stMetricLabel"] {
+        color: #000000 !important;
+        font-size: 14px !important;
+    }
     h1 {
         color: #E50914;
         font-family: 'Helvetica Neue', sans-serif;
