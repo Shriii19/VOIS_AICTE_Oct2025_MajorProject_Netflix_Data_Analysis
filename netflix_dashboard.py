@@ -10,8 +10,12 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 import random
-from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+try:
+    from wordcloud import WordCloud  # Optional dependency
+    HAS_WORDCLOUD = True
+except Exception:
+    HAS_WORDCLOUD = False
 
 # Page configuration
 st.set_page_config(
@@ -75,15 +79,23 @@ def load_data():
             df = pd.read_csv('Netflix Dataset.csv')
             df.columns = [c.strip().lower().replace(' ', '_') for c in df.columns]
             
-            # Rename columns
-            if 'category' in df.columns:
-                df = df.rename(columns={'category': 'type'})
-            if 'type' in df.columns and 'listed_in' not in df.columns:
-                df = df.rename(columns={'type': 'listed_in'})
-            if 'release_date' in df.columns:
+            # Preserve original 'type' (often Movie/TV Show in some datasets, but sometimes genres)
+            original_type = df['type'].copy() if 'type' in df.columns else None
+
+            # Map columns safely
+            if 'release_date' in df.columns and 'date_added' not in df.columns:
                 df = df.rename(columns={'release_date': 'date_added'})
+            if 'category' in df.columns:
+                df['type'] = df['category']  # Movie / TV Show
+            # Ensure genres column exists
+            if 'listed_in' not in df.columns:
+                if original_type is not None and original_type.dtype == object:
+                    df['listed_in'] = original_type
+                else:
+                    df['listed_in'] = ''
             
-            df['date_added'] = pd.to_datetime(df['date_added'], errors='coerce')
+            # Dates
+            df['date_added'] = pd.to_datetime(df.get('date_added'), errors='coerce')
             df['year_added'] = df['date_added'].dt.year
             
         return df
@@ -160,16 +172,56 @@ if df is not None:
     st.sidebar.markdown("---")
     st.sidebar.header("💡 Did You Know?")
     
-    fun_facts = [
-        f"🎬 Netflix has content from {df['country'].dropna().str.split(', ').explode().nunique()} countries!",
-        f"📺 The platform added {len(df[df['year_added'] == df['year_added'].max()])} titles in {int(df['year_added'].max())}!",
-        f"⭐ '{df['rating'].mode()[0]}' is the most common rating!",
-        f"🎭 '{df['listed_in'].dropna().str.split(', ').explode().mode()[0]}' is the top genre!",
-        f"🎥 Average movie duration is {df[df['type']=='Movie']['duration'].str.extract(r'(\d+)')[0].astype(float).mean():.0f} minutes!",
-        f"🌍 USA produces {len(df[df['country'].str.contains('United States', na=False)])} titles!",
-        f"📈 Content library grew {((len(df) / len(df[df['year_added'] == df['year_added'].min()])) * 100):.0f}% since inception!",
-        f"🎬 Top director has {df['director'].value_counts().iloc[0]} titles!" if 'director' in df.columns else "🎬 Explore to find top directors!",
-    ]
+    # Safe utilities
+    def safe_mode(series):
+        try:
+            m = series.mode(dropna=True)
+            return m.iloc[0] if not m.empty else 'N/A'
+        except Exception:
+            return 'N/A'
+
+    unique_countries = df['country'].dropna().str.split(', ').explode().nunique() if 'country' in df.columns else 0
+    max_year = df['year_added'].dropna().max() if 'year_added' in df.columns else None
+    latest_year_count = int(len(df[df['year_added'] == max_year])) if max_year == max_year and pd.notna(max_year) else 0
+    common_rating = safe_mode(df['rating']) if 'rating' in df.columns else 'N/A'
+    common_genre = safe_mode(df['listed_in'].dropna().str.split(', ').explode()) if 'listed_in' in df.columns else 'N/A'
+    avg_movie_mins = None
+    if 'duration' in df.columns and 'type' in df.columns:
+        try:
+            avg_movie_mins = df[df['type']=='Movie']['duration'].str.extract(r'(\d+)')[0].astype(float).mean()
+        except Exception:
+            avg_movie_mins = None
+    usa_titles = len(df[df['country'].str.contains('United States', na=False)]) if 'country' in df.columns else 0
+    # Growth between earliest and latest counts
+    if 'year_added' in df.columns and df['year_added'].notna().any():
+        earliest_year = df['year_added'].dropna().min()
+        e_cnt = len(df[df['year_added'] == earliest_year])
+        l_cnt = len(df[df['year_added'] == max_year]) if pd.notna(max_year) else 0
+        growth_pct = ((l_cnt - e_cnt) / e_cnt * 100) if e_cnt else None
+    else:
+        growth_pct = None
+    top_director_titles = None
+    if 'director' in df.columns and df['director'].notna().any():
+        vc = df['director'].dropna().str.split(', ').explode().value_counts()
+        top_director_titles = int(vc.iloc[0]) if len(vc) else None
+
+    fun_facts = []
+    fun_facts.append(f"🎬 Netflix has content from {unique_countries} countries!")
+    if pd.notna(max_year):
+        fun_facts.append(f"📺 The platform added {latest_year_count} titles in {int(max_year)}!")
+    if common_rating != 'N/A':
+        fun_facts.append(f"⭐ '{common_rating}' is the most common rating!")
+    if common_genre != 'N/A':
+        fun_facts.append(f"🎭 '{common_genre}' is the top genre!")
+    if avg_movie_mins and not pd.isna(avg_movie_mins):
+        fun_facts.append(f"🎥 Average movie duration is {avg_movie_mins:.0f} minutes!")
+    fun_facts.append(f"� USA produces {usa_titles} titles!")
+    if growth_pct is not None:
+        fun_facts.append(f"📈 Latest vs earliest year: {growth_pct:+.0f}% change")
+    if top_director_titles:
+        fun_facts.append(f"🎬 Top director has {top_director_titles} titles!")
+    if not fun_facts:
+        fun_facts.append("Explore the data to discover insights!")
     
     if st.sidebar.button("🔄 Refresh Fun Fact"):
         st.session_state.fun_fact_index = random.randint(0, len(fun_facts) - 1)
@@ -537,7 +589,7 @@ if df is not None:
         
         # Word Cloud from Descriptions
         st.subheader("☁️ Content Themes Word Cloud")
-        if 'description' in filtered_df.columns:
+        if HAS_WORDCLOUD and 'description' in filtered_df.columns:
             descriptions_text = ' '.join(filtered_df['description'].dropna().astype(str))
             
             if descriptions_text:
@@ -561,6 +613,8 @@ if df is not None:
                     st.caption("Word cloud generated from content descriptions showing popular themes and keywords")
                 except Exception as e:
                     st.warning(f"Could not generate word cloud: {e}")
+        elif not HAS_WORDCLOUD:
+            st.info("Install the 'wordcloud' package to enable this visualization.")
     
     # Tab 6: Explore Data
     with tab6:
