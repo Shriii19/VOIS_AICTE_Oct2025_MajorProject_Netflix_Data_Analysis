@@ -25,45 +25,114 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS
-st.markdown("""
-    <style>
-    .main {
-        padding: 0rem 1rem;
-    }
-    .stMetric {
-        background-color: #f0f2f6;
-        padding: 10px;
-        border-radius: 5px;
-    }
-    .stMetric label {
-        color: #000000 !important;
-        font-weight: 600;
-    }
-    .stMetric .css-1xarl3l {
-        color: #000000 !important;
-    }
-    [data-testid="stMetricValue"] {
-        color: #E50914 !important;
-        font-size: 28px !important;
-        font-weight: bold !important;
-    }
-    [data-testid="stMetricLabel"] {
-        color: #000000 !important;
-        font-size: 14px !important;
-    }
-    h1 {
-        color: #E50914;
-        font-family: 'Helvetica Neue', sans-serif;
-    }
-    .netflix-header {
-        background-color: #000000;
-        padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
-    </style>
+# ---------------- Theme & Styling ---------------- #
+def get_theme():
+    theme_choice = st.session_state.get('theme', 'Light')
+    if theme_choice == 'Dark':
+        return {
+            'bg': '#0f0f0f',
+            'surface': '#141414',
+            'card': '#1a1a1a',
+            'text': '#e6e6e6',
+            'muted': '#b3b3b3',
+            'primary': '#E50914',
+            'accent': '#b20710',
+        }
+    else:  # Light
+        return {
+            'bg': '#ffffff',
+            'surface': '#f7f7f7',
+            'card': '#ffffff',
+            'text': '#111111',
+            'muted': '#5c5c5c',
+            'primary': '#E50914',
+            'accent': '#b20710',
+        }
+
+def apply_base_css(t):
+    st.markdown(f"""
+        <style>
+        :root {{
+            --bg: {t['bg']};
+            --surface: {t['surface']};
+            --card: {t['card']};
+            --text: {t['text']};
+            --muted: {t['muted']};
+            --primary: {t['primary']};
+            --accent: {t['accent']};
+        }}
+        .main {{
+            padding: 0rem 1rem;
+            background: var(--bg);
+            color: var(--text);
+        }}
+        /* Hero */
+        .hero {{
+            background: linear-gradient(135deg, rgba(229,9,20,0.12), rgba(229,9,20,0.04));
+            border: 1px solid rgba(229,9,20,0.20);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 18px;
+        }}
+        .hero h1 {{
+            color: var(--primary);
+            margin: 0 0 6px 0;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }}
+        .hero p {{
+            color: var(--muted);
+            margin: 0;
+        }}
+        /* KPI cards */
+        .kpi {{
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 16px 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }}
+        .kpi .label {{
+            color: var(--muted);
+            font-size: 12px;
+            margin-bottom: 6px;
+        }}
+        .kpi .value {{
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 800;
+        }}
+        .kpi .icon {{
+            color: var(--primary);
+            font-size: 18px;
+            margin-right: 8px;
+        }}
+        /* Section divider */
+        .section-title {{
+            color: var(--text);
+            font-weight: 700;
+            margin: 8px 0 4px 0;
+        }}
+        /* Sidebar tweaks */
+        [data-testid="stSidebar"] {{
+            background: var(--surface);
+        }}
+        </style>
     """, unsafe_allow_html=True)
+
+def style_fig(fig, t):
+    fig.update_layout(
+        template='plotly_white',
+        paper_bgcolor=t['card'],
+        plot_bgcolor=t['card'],
+        font=dict(color=t['text'], family='Inter, Segoe UI, system-ui, -apple-system'),
+        legend=dict(title_text='', bgcolor='rgba(0,0,0,0)'),
+        margin=dict(l=10, r=10, t=50, b=10)
+    )
+    return fig
+
+theme = get_theme()
+apply_base_css(theme)
 
 # Load data function with caching
 @st.cache_data
@@ -108,65 +177,99 @@ df = load_data()
 
 if df is not None:
     # Header
-    st.markdown('<div class="netflix-header">', unsafe_allow_html=True)
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.title("🎬 Netflix Data Analysis Dashboard")
-        st.markdown("**Interactive insights into Netflix's content strategy**")
+        st.markdown('<div class="hero">', unsafe_allow_html=True)
+        st.markdown("<h1>🎬 Netflix Data Analysis Dashboard</h1>", unsafe_allow_html=True)
+        st.markdown("<p>Interactive insights into Netflix's content strategy</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     with col2:
         st.image("https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg", width=150)
-    st.markdown('</div>', unsafe_allow_html=True)
     
     # Sidebar
     st.sidebar.header("📊 Filters & Options")
+    # Theme toggle
+    st.sidebar.selectbox("Theme", ["Light", "Dark"], index=(0 if st.session_state.get('theme','Light')=='Light' else 1), key='theme')
+    # Apply theme if changed
+    theme = get_theme()
+    apply_base_css(theme)
     
-    # Sidebar filters
-    content_type = st.sidebar.multiselect(
-        "Select Content Type",
-        options=df['type'].unique() if 'type' in df.columns else [],
-        default=df['type'].unique() if 'type' in df.columns else []
-    )
-    
-    if 'year_added' in df.columns:
-        year_range = st.sidebar.slider(
-            "Year Added Range",
-            min_value=int(df['year_added'].min()) if df['year_added'].notna().any() else 2008,
-            max_value=int(df['year_added'].max()) if df['year_added'].notna().any() else 2021,
-            value=(int(df['year_added'].min()) if df['year_added'].notna().any() else 2008, 
-                   int(df['year_added'].max()) if df['year_added'].notna().any() else 2021)
+    # Defaults and Reset
+    def compute_defaults():
+        defaults = {}
+        defaults['content_type'] = list(df['type'].unique()) if 'type' in df.columns else []
+        if 'year_added' in df.columns and df['year_added'].notna().any():
+            defaults['year_range'] = (int(df['year_added'].min()), int(df['year_added'].max()))
+        else:
+            defaults['year_range'] = (2008, 2021)
+        defaults['ratings'] = sorted(df['rating'].dropna().unique().tolist()) if 'rating' in df.columns else []
+        defaults['genres'] = sorted(df['listed_in'].dropna().str.split(', ').explode().unique().tolist())[:20] if 'listed_in' in df.columns else []
+        defaults['countries'] = sorted(df['country'].dropna().str.split(', ').explode().value_counts().head(15).index.tolist()) if 'country' in df.columns else []
+        return defaults
+
+    defaults = compute_defaults()
+    if st.sidebar.button("↺ Reset Filters"):
+        st.session_state['content_type'] = defaults['content_type']
+        st.session_state['year_range'] = defaults['year_range']
+        st.session_state['selected_ratings'] = defaults['ratings']
+        st.session_state['selected_genres'] = []
+        st.session_state['selected_countries'] = []
+        st.experimental_rerun()
+
+    # Sidebar filters grouped in expanders
+    with st.sidebar.expander("Content"):
+        content_type = st.multiselect(
+            "Select Content Type",
+            options=defaults['content_type'],
+            default=st.session_state.get('content_type', defaults['content_type']),
+            key='content_type'
         )
+
+    with st.sidebar.expander("Time Range"):
+        if 'year_added' in df.columns:
+            year_range = st.slider(
+                "Year Added Range",
+                min_value=defaults['year_range'][0],
+                max_value=defaults['year_range'][1],
+                value=st.session_state.get('year_range', defaults['year_range']),
+                key='year_range'
+            )
     
     # Additional filters
-    if 'rating' in df.columns:
-        all_ratings = df['rating'].dropna().unique()
-        selected_ratings = st.sidebar.multiselect(
-            "Select Ratings",
-            options=sorted(all_ratings),
-            default=sorted(all_ratings)
-        )
-    else:
-        selected_ratings = []
+    with st.sidebar.expander("Genres & Ratings"):
+        if 'rating' in df.columns:
+            all_ratings = defaults['ratings']
+            selected_ratings = st.multiselect(
+                "Select Ratings",
+                options=all_ratings,
+                default=st.session_state.get('selected_ratings', all_ratings),
+                key='selected_ratings'
+            )
+        else:
+            selected_ratings = []
     
-    if 'listed_in' in df.columns:
-        all_genres = df['listed_in'].dropna().str.split(', ').explode().unique()
-        selected_genres = st.sidebar.multiselect(
-            "Select Genres",
-            options=sorted(all_genres)[:20],  # Top 20 for performance
-            default=[]
-        )
-    else:
-        selected_genres = []
+        if 'listed_in' in df.columns:
+            all_genres = defaults['genres']
+            selected_genres = st.multiselect(
+                "Select Genres",
+                options=all_genres,
+                default=st.session_state.get('selected_genres', []),
+                key='selected_genres'
+            )
+        else:
+            selected_genres = []
     
-    if 'country' in df.columns:
-        all_countries = df['country'].dropna().str.split(', ').explode().unique()
-        top_countries = df['country'].dropna().str.split(', ').explode().value_counts().head(15).index.tolist()
-        selected_countries = st.sidebar.multiselect(
-            "Select Countries",
-            options=sorted(top_countries),
-            default=[]
-        )
-    else:
-        selected_countries = []
+    with st.sidebar.expander("Countries"):
+        if 'country' in df.columns:
+            top_countries = defaults['countries']
+            selected_countries = st.multiselect(
+                "Select Countries",
+                options=top_countries,
+                default=st.session_state.get('selected_countries', []),
+                key='selected_countries'
+            )
+        else:
+            selected_countries = []
     
     # Fun Facts Section
     st.sidebar.markdown("---")
@@ -254,29 +357,23 @@ if df is not None:
         filtered_df = filtered_df[filtered_df['country'].str.contains('|'.join(selected_countries), na=False)]
     
     # Key Metrics
-    st.header("📈 Key Metrics")
+    st.markdown('<h3 class="section-title">📈 Key Metrics</h3>', unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
-    
+    total_titles = f"{len(filtered_df):,}"
+    movies = len(filtered_df[filtered_df['type'] == 'Movie']) if 'type' in filtered_df.columns else 0
+    tv_shows = len(filtered_df[filtered_df['type'] == 'TV Show']) if 'type' in filtered_df.columns else 0
+    countries = filtered_df['country'].dropna().str.split(', ').explode().nunique() if 'country' in filtered_df.columns else 0
     with col1:
-        st.metric("Total Titles", f"{len(filtered_df):,}")
-    
+        st.markdown(f"<div class='kpi'><div class='label'>Total Titles</div><div class='value'>📚 {total_titles}</div></div>", unsafe_allow_html=True)
     with col2:
-        if 'type' in filtered_df.columns:
-            movies = len(filtered_df[filtered_df['type'] == 'Movie'])
-            st.metric("Movies", f"{movies:,}")
-    
+        st.markdown(f"<div class='kpi'><div class='label'>Movies</div><div class='value'>🎞️ {movies:,}</div></div>", unsafe_allow_html=True)
     with col3:
-        if 'type' in filtered_df.columns:
-            tv_shows = len(filtered_df[filtered_df['type'] == 'TV Show'])
-            st.metric("TV Shows", f"{tv_shows:,}")
-    
+        st.markdown(f"<div class='kpi'><div class='label'>TV Shows</div><div class='value'>📺 {tv_shows:,}</div></div>", unsafe_allow_html=True)
     with col4:
-        if 'country' in filtered_df.columns:
-            countries = filtered_df['country'].dropna().str.split(', ').explode().nunique()
-            st.metric("Countries", f"{countries:,}")
+        st.markdown(f"<div class='kpi'><div class='label'>Countries</div><div class='value'>🌍 {countries:,}</div></div>", unsafe_allow_html=True)
     
     # Summary Statistics Cards
-    st.header("📊 Summary Statistics")
+    st.markdown('<h3 class="section-title">📊 Summary Statistics</h3>', unsafe_allow_html=True)
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
@@ -333,7 +430,7 @@ if df is not None:
                     color_discrete_sequence=['#E50914', '#564d4d']
                 )
                 fig.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
         
         with col2:
             if 'rating' in filtered_df.columns:
@@ -348,7 +445,7 @@ if df is not None:
                     color=rating_counts.values,
                     color_continuous_scale='Reds'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
         
         # Duration analysis
         if 'duration' in filtered_df.columns and 'type' in filtered_df.columns:
@@ -367,7 +464,7 @@ if df is not None:
                     labels={'duration_minutes': 'Duration (minutes)', 'count': 'Number of Movies'},
                     color_discrete_sequence=['#E50914']
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
     
     # Tab 2: Genres
     with tab2:
@@ -391,7 +488,7 @@ if df is not None:
                     color_continuous_scale='Reds'
                 )
                 fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
             
             with col2:
                 st.subheader("Genre Statistics")
@@ -428,7 +525,7 @@ if df is not None:
                     labels={'year_added': 'Year', 'count': 'Number of Titles'},
                     markers=True
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
     
     # Tab 3: Geographic
     with tab3:
@@ -481,7 +578,7 @@ if df is not None:
                 color_continuous_scale='Reds',
                 labels={'count': 'Number of Titles'}
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(style_fig(fig, theme), use_container_width=True)
     
     # Tab 4: Temporal
     with tab4:
@@ -523,7 +620,7 @@ if df is not None:
                     color=monthly_counts.values,
                     color_continuous_scale='Reds'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
     
     # Tab 5: Cast & Directors
     with tab5:
@@ -547,7 +644,7 @@ if df is not None:
                     color_continuous_scale='Reds'
                 )
                 fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(style_fig(fig, theme), use_container_width=True)
                 
                 # Directors table
                 st.dataframe(
