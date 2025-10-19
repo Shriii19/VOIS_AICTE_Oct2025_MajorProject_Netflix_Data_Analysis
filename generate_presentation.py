@@ -137,31 +137,63 @@ def create_charts(df):
 
 def slide_title(prs, title, subtitle=None):
     slide = prs.slides.add_slide(prs.slide_layouts[0])
-    slide.shapes.title.text = title
+    # Netflix-style: red title, black background
+    title_shape = slide.shapes.title
+    title_shape.text = title
+    title_shape.text_frame.paragraphs[0].font.bold = True
+    title_shape.text_frame.paragraphs[0].font.size = Pt(44)
+    title_shape.text_frame.paragraphs[0].font.color.rgb = RGBColor(229, 9, 20)
+    # Subtitle
     if subtitle:
-        slide.placeholders[1].text = subtitle
+        sub = slide.placeholders[1]
+        sub.text = subtitle
+        sub.text_frame.paragraphs[0].font.size = Pt(20)
+        sub.text_frame.paragraphs[0].font.color.rgb = RGBColor(34, 34, 34)
+    # Set background color (black)
+    fill = slide.background.fill
+    fill.solid()
+    fill.fore_color.rgb = RGBColor(0, 0, 0)
     return slide
 
 
 def slide_bullets(prs, title, bullets):
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     slide.shapes.title.text = title
+    slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(229, 9, 20)
     tf = slide.placeholders[1].text_frame
     tf.clear()
     for b in bullets:
         p = tf.add_paragraph()
         p.text = b
         p.level = 0
+        p.font.size = Pt(18)
+        p.font.color.rgb = RGBColor(34, 34, 34)
+    # Add divider line
+    left = Inches(0.5)
+    top = Inches(1.2)
+    width = Inches(9)
+    height = Inches(0.05)
+    shape = slide.shapes.add_shape(1, left, top, width, height)  # 1=Rectangle
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = RGBColor(229, 9, 20)
+    shape.line.color.rgb = RGBColor(229, 9, 20)
     return slide
 
 
 def slide_image(prs, title, img_path):
     slide = prs.slides.add_slide(prs.slide_layouts[5])
     slide.shapes.title.text = title
+    slide.shapes.title.text_frame.paragraphs[0].font.color.rgb = RGBColor(229, 9, 20)
     left = Inches(1.0)
     top = Inches(1.7)
     width = Inches(8.0)
-    slide.shapes.add_picture(img_path, left, top, width=width)
+    pic = slide.shapes.add_picture(img_path, left, top, width=width)
+    # Add caption below image
+    caption = slide.shapes.add_textbox(left, top+width*0.12, width, Inches(0.4))
+    tf = caption.text_frame
+    tf.text = f"Chart: {title}"
+    tf.paragraphs[0].font.size = Pt(14)
+    tf.paragraphs[0].font.color.rgb = RGBColor(34, 34, 34)
     return slide
 
 
