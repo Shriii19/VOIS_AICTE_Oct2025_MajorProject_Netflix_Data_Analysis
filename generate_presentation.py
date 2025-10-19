@@ -59,6 +59,24 @@ def save_matplotlib(fig, name):
     plt.close(fig)
     return path
 
+def save_plotly(fig, name):
+    """Save plotly figure as PNG using kaleido if available; return path or None."""
+    path = os.path.join(CHART_DIR, name)
+    try:
+        # Requires kaleido
+        fig.write_image(path, scale=2)
+        return path
+    except Exception as e:
+        print(f"[WARN] Could not export plotly image '{name}': {e}. Install 'kaleido' to enable static image export.")
+        return None
+
+def safe_mode(series, default='N/A'):
+    try:
+        m = series.mode(dropna=True)
+        return m.iloc[0] if not m.empty else default
+    except Exception:
+        return default
+
 
 def create_charts(df):
     charts = {}
@@ -78,9 +96,9 @@ def create_charts(df):
         year_counts = df.dropna(subset=['year_added']).groupby(['year_added','type']).size().reset_index(name='count')
         fig = px.area(year_counts, x='year_added', y='count', color='type', title='Content Added Per Year by Type')
         fig.update_layout(template='plotly_white')
-        area_path = os.path.join(CHART_DIR, 'content_per_year.png')
-        fig.write_image(area_path, scale=2)
-        charts['per_year'] = area_path
+        area_path = save_plotly(fig, 'content_per_year.png')
+        if area_path:
+            charts['per_year'] = area_path
 
     # 3) Top genres
     if 'listed_in' in df.columns:
@@ -156,8 +174,8 @@ def build_ppt(df, charts):
     # Executive Summary
     movies = int((df['type']=='Movie').sum()) if 'type' in df.columns else 0
     tvshows = int((df['type']=='TV Show').sum()) if 'type' in df.columns else 0
-    top_genre = df['listed_in'].dropna().str.split(', ').explode().mode()[0] if 'listed_in' in df.columns else 'N/A'
-    top_country = df['country'].dropna().str.split(', ').explode().mode()[0] if 'country' in df.columns else 'N/A'
+    top_genre = safe_mode(df['listed_in'].dropna().str.split(', ').explode()) if 'listed_in' in df.columns else 'N/A'
+    top_country = safe_mode(df['country'].dropna().str.split(', ').explode()) if 'country' in df.columns else 'N/A'
 
     slide_bullets(
         prs,
