@@ -2,3 +2,9 @@ streamlit
 pandas
 plotly
 numpy
+matplotlib
+seaborn
+python-pptx
+wordcloud
+jupyter
+kaleido

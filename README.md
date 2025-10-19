@@ -93,6 +93,7 @@ Netflix_Data_Analysis/
    ```bash
    pip install -r requirements.txt
    ```
+   Note: Static image export for Plotly requires Kaleido, which is included in requirements.
 
 3. **Verify installation**
    ```bash
@@ -120,6 +121,7 @@ Netflix_Data_Analysis/
    ```bash
    streamlit run netflix_dashboard.py
    ```
+   If you hit ModuleNotFoundError for 'wordcloud', install it or continue without the word cloud feature.
 
 2. **Access the dashboard** in your web browser (usually opens automatically at `http://localhost:8501`)
 
@@ -134,6 +136,7 @@ Netflix_Data_Analysis/
 ```bash
 python generate_presentation.py
 ```
+If chart images are missing in the PPTX, install Kaleido for Plotly image export.
 
 ## 📊 Analysis Highlights
 
