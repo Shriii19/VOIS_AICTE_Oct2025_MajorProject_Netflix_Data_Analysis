@@ -52,6 +52,8 @@ def get_theme():
 def apply_base_css(t):
     st.markdown(f"""
         <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
         :root {{
             --bg: {t['bg']};
             --surface: {t['surface']};
@@ -61,61 +63,257 @@ def apply_base_css(t):
             --primary: {t['primary']};
             --accent: {t['accent']};
         }}
+        
+        * {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }}
+        
         .main {{
-            padding: 0rem 1rem;
+            padding: 0rem 1.5rem;
             background: var(--bg);
             color: var(--text);
+            animation: fadeIn 0.5s ease-in;
         }}
-        /* Hero */
+        
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+        
+        @keyframes slideIn {{
+            from {{ opacity: 0; transform: translateX(-20px); }}
+            to {{ opacity: 1; transform: translateX(0); }}
+        }}
+        
+        /* Hero Section */
         .hero {{
-            background: linear-gradient(135deg, rgba(229,9,20,0.12), rgba(229,9,20,0.04));
-            border: 1px solid rgba(229,9,20,0.20);
-            padding: 24px;
-            border-radius: 16px;
-            margin-bottom: 18px;
+            background: linear-gradient(135deg, rgba(229,9,20,0.15), rgba(229,9,20,0.05));
+            border: 2px solid rgba(229,9,20,0.25);
+            padding: 32px 28px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(229,9,20,0.1);
+            transition: all 0.3s ease;
+            animation: slideIn 0.6s ease-out;
         }}
+        
+        .hero::before {{
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(229,9,20,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }}
+        
+        @keyframes pulse {{
+            0%, 100% {{ transform: scale(1); opacity: 0.5; }}
+            50% {{ transform: scale(1.1); opacity: 0.8; }}
+        }}
+        
+        .hero:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 12px 48px rgba(229,9,20,0.15);
+            border-color: rgba(229,9,20,0.4);
+        }}
+        
         .hero h1 {{
             color: var(--primary);
-            margin: 0 0 6px 0;
+            margin: 0 0 8px 0;
             font-weight: 800;
-            letter-spacing: 0.2px;
+            letter-spacing: -0.5px;
+            font-size: 2.5rem;
+            position: relative;
+            z-index: 1;
         }}
+        
         .hero p {{
             color: var(--muted);
             margin: 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
         }}
-        /* KPI cards */
+        
+        /* Enhanced KPI Cards */
         .kpi {{
             background: var(--card);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 14px;
-            padding: 16px 18px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            border: 1px solid rgba(229,9,20,0.1);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
         }}
+        
+        .kpi::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }}
+        
+        .kpi:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(229,9,20,0.15);
+            border-color: rgba(229,9,20,0.3);
+        }}
+        
+        .kpi:hover::before {{
+            transform: scaleX(1);
+        }}
+        
         .kpi .label {{
             color: var(--muted);
-            font-size: 12px;
-            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
         }}
+        
         .kpi .value {{
             color: var(--text);
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 800;
+            line-height: 1.2;
+            background: linear-gradient(135deg, var(--text), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }}
-        .kpi .icon {{
-            color: var(--primary);
-            font-size: 18px;
-            margin-right: 8px;
-        }}
-        /* Section divider */
+        
+        /* Section Headers */
         .section-title {{
             color: var(--text);
             font-weight: 700;
-            margin: 8px 0 4px 0;
+            font-size: 1.5rem;
+            margin: 24px 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+            display: inline-block;
+            position: relative;
         }}
-        /* Sidebar tweaks */
+        
+        .section-title::after {{
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 40%;
+            height: 2px;
+            background: var(--accent);
+            animation: expandWidth 0.6s ease-out;
+        }}
+        
+        @keyframes expandWidth {{
+            from {{ width: 0; }}
+            to {{ width: 40%; }}
+        }}
+        
+        /* Sidebar Enhancement */
         [data-testid="stSidebar"] {{
             background: var(--surface);
+            border-right: 1px solid rgba(229,9,20,0.1);
+        }}
+        
+        [data-testid="stSidebar"] .stButton button {{
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(229,9,20,0.3);
+        }}
+        
+        [data-testid="stSidebar"] .stButton button:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(229,9,20,0.4);
+        }}
+        
+        /* Tab Styling */
+        .stTabs [data-baseweb="tab-list"] {{
+            gap: 8px;
+        }}
+        
+        .stTabs [data-baseweb="tab"] {{
+            border-radius: 10px 10px 0 0;
+            padding: 10px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }}
+        
+        .stTabs [aria-selected="true"] {{
+            background: linear-gradient(135deg, rgba(229,9,20,0.1), rgba(229,9,20,0.05));
+            border-bottom: 3px solid var(--primary);
+        }}
+        
+        /* Metric Cards */
+        [data-testid="stMetric"] {{
+            background: var(--card);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(229,9,20,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }}
+        
+        /* Dataframe Styling */
+        .stDataFrame {{
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        }}
+        
+        /* Info/Success/Warning boxes */
+        .stAlert {{
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+            animation: slideIn 0.4s ease-out;
+        }}
+        
+        /* Expander */
+        .streamlit-expanderHeader {{
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }}
+        
+        .streamlit-expanderHeader:hover {{
+            background: rgba(229,9,20,0.05);
+        }}
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {{
+            width: 8px;
+            height: 8px;
+        }}
+        
+        ::-webkit-scrollbar-track {{
+            background: var(--surface);
+        }}
+        
+        ::-webkit-scrollbar-thumb {{
+            background: var(--primary);
+            border-radius: 4px;
+        }}
+        
+        ::-webkit-scrollbar-thumb:hover {{
+            background: var(--accent);
         }}
         </style>
     """, unsafe_allow_html=True)
@@ -125,10 +323,30 @@ def style_fig(fig, t):
         template='plotly_white',
         paper_bgcolor=t['card'],
         plot_bgcolor=t['card'],
-        font=dict(color=t['text'], family='Inter, Segoe UI, system-ui, -apple-system'),
-        legend=dict(title_text='', bgcolor='rgba(0,0,0,0)'),
-        margin=dict(l=10, r=10, t=50, b=10)
+        font=dict(color=t['text'], family='Inter, system-ui, -apple-system', size=12),
+        legend=dict(
+            title_text='',
+            bgcolor='rgba(0,0,0,0)',
+            font=dict(size=11),
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='right',
+            x=1
+        ),
+        margin=dict(l=20, r=20, t=60, b=20),
+        title_font=dict(size=18, color=t['text'], family='Inter'),
+        hoverlabel=dict(
+            bgcolor=t['card'],
+            font_size=12,
+            font_family='Inter'
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        transition_duration=500
     )
+    # Add subtle grid
+    fig.update_xaxes(gridcolor='rgba(229,9,20,0.1)', gridwidth=1)
+    fig.update_yaxes(gridcolor='rgba(229,9,20,0.1)', gridwidth=1)
     return fig
 
 theme = get_theme()
