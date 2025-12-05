@@ -27,26 +27,42 @@ st.set_page_config(
 
 # ---------------- Theme & Styling ---------------- #
 def get_theme():
-    theme_choice = st.session_state.get('theme', 'Light')
-    if theme_choice == 'Dark':
+    theme_choice = st.session_state.get('theme', 'Netflix')
+    if theme_choice == 'Netflix':
         return {
-            'bg': '#0f0f0f',
-            'surface': '#141414',
-            'card': '#1a1a1a',
+            'bg': '#0c0c0f',
+            'surface': '#141423',
+            'card': '#1a1a2e',
+            'text': '#ffffff',
+            'muted': '#8c8c9c',
+            'primary': '#E50914',
+            'accent': '#831010',
+            'blue': '#0f3460',
+            'darkblue': '#16213e',
+        }
+    elif theme_choice == 'Dark':
+        return {
+            'bg': '#0c0c0f',
+            'surface': '#141423',
+            'card': '#1a1a2e',
             'text': '#e6e6e6',
             'muted': '#b3b3b3',
             'primary': '#E50914',
             'accent': '#b20710',
+            'blue': '#0f3460',
+            'darkblue': '#16213e',
         }
     else:  # Light
         return {
-            'bg': '#ffffff',
-            'surface': '#f7f7f7',
+            'bg': '#f8f9fa',
+            'surface': '#ffffff',
             'card': '#ffffff',
             'text': '#111111',
             'muted': '#5c5c5c',
             'primary': '#E50914',
             'accent': '#b20710',
+            'blue': '#0f3460',
+            'darkblue': '#16213e',
         }
 
 def apply_base_css(t):
@@ -62,6 +78,8 @@ def apply_base_css(t):
             --muted: {t['muted']};
             --primary: {t['primary']};
             --accent: {t['accent']};
+            --blue: {t['blue']};
+            --darkblue: {t['darkblue']};
         }}
         
         * {{
@@ -87,15 +105,15 @@ def apply_base_css(t):
         
         /* Hero Section */
         .hero {{
-            background: linear-gradient(135deg, rgba(229,9,20,0.15), rgba(229,9,20,0.05));
-            border: 2px solid rgba(229,9,20,0.25);
+            background: linear-gradient(135deg, var(--darkblue), var(--blue));
+            border: 2px solid rgba(229,9,20,0.4);
             padding: 32px 28px;
             border-radius: 20px;
             margin-bottom: 24px;
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 32px rgba(229,9,20,0.1);
+            box-shadow: 0 8px 32px rgba(229,9,20,0.2), 0 0 60px rgba(15,52,96,0.3);
             transition: all 0.3s ease;
             animation: slideIn 0.6s ease-out;
         }}
@@ -107,7 +125,7 @@ def apply_base_css(t):
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(229,9,20,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(229,9,20,0.2) 0%, rgba(15,52,96,0.1) 50%, transparent 70%);
             animation: pulse 4s ease-in-out infinite;
         }}
         
@@ -143,11 +161,11 @@ def apply_base_css(t):
         
         /* Enhanced KPI Cards */
         .kpi {{
-            background: var(--card);
-            border: 1px solid rgba(229,9,20,0.1);
+            background: linear-gradient(145deg, var(--card), var(--darkblue));
+            border: 1px solid rgba(229,9,20,0.3);
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 20px rgba(15,52,96,0.3), 0 2px 10px rgba(229,9,20,0.1);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
@@ -168,8 +186,8 @@ def apply_base_css(t):
         
         .kpi:hover {{
             transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(229,9,20,0.15);
-            border-color: rgba(229,9,20,0.3);
+            box-shadow: 0 8px 30px rgba(229,9,20,0.3), 0 4px 20px rgba(15,52,96,0.4);
+            border-color: rgba(229,9,20,0.6);
         }}
         
         .kpi:hover::before {{
@@ -226,8 +244,8 @@ def apply_base_css(t):
         
         /* Sidebar Enhancement */
         [data-testid="stSidebar"] {{
-            background: var(--surface);
-            border-right: 1px solid rgba(229,9,20,0.1);
+            background: linear-gradient(180deg, var(--darkblue), var(--surface));
+            border-right: 2px solid rgba(229,9,20,0.3);
         }}
         
         [data-testid="stSidebar"] .stButton button {{
@@ -259,8 +277,9 @@ def apply_base_css(t):
         }}
         
         .stTabs [aria-selected="true"] {{
-            background: linear-gradient(135deg, rgba(229,9,20,0.1), rgba(229,9,20,0.05));
+            background: linear-gradient(135deg, var(--darkblue), rgba(229,9,20,0.15));
             border-bottom: 3px solid var(--primary);
+            color: var(--text) !important;
         }}
         
         /* Metric Cards */
@@ -322,7 +341,7 @@ def style_fig(fig, t):
     fig.update_layout(
         template='plotly_white',
         paper_bgcolor=t['card'],
-        plot_bgcolor=t['card'],
+        plot_bgcolor='rgba(0,0,0,0)',
         font=dict(color=t['text'], family='Inter, system-ui, -apple-system', size=12),
         legend=dict(
             title_text='',
@@ -341,7 +360,6 @@ def style_fig(fig, t):
             font_size=12,
             font_family='Inter'
         ),
-        plot_bgcolor='rgba(0,0,0,0)',
         transition_duration=500
     )
     # Add subtle grid
@@ -407,7 +425,10 @@ if df is not None:
     # Sidebar
     st.sidebar.header("📊 Filters & Options")
     # Theme toggle
-    st.sidebar.selectbox("Theme", ["Light", "Dark"], index=(0 if st.session_state.get('theme','Light')=='Light' else 1), key='theme')
+    theme_options = ["Netflix", "Dark", "Light"]
+    current_theme = st.session_state.get('theme', 'Netflix')
+    theme_index = theme_options.index(current_theme) if current_theme in theme_options else 0
+    st.sidebar.selectbox("Theme", theme_options, index=theme_index, key='theme')
     # Apply theme if changed
     theme = get_theme()
     apply_base_css(theme)
